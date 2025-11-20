@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết dự án</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <header class="header-detail">
+        <button id="btnBack" class="btn-back">← Quay lại</button>
+        <div class="header-content">
+            <h1 id="projectTitle">Chi tiết dự án</h1>
+            <div class="header-actions">
+                <button onclick="showEditProjectModal()" class="btn-edit">✏️ Chỉnh sửa</button>
+                <button onclick="exportProjectDOC()" class="btn-export">📝 Xuất DOC</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Thông tin dự án sẽ được thêm bởi JavaScript -->
+        <div id="projectProgress"></div>
+
+        <!-- Thêm giai đoạn -->
+        <section class="box">
+            <h2>Thêm giai đoạn mới</h2>
+            <div class="add-stage-form">
+                <input type="text" id="stageName" placeholder="Tên giai đoạn...">
+                <button id="btnAddStage" class="btn-primary">Thêm giai đoạn</button>
+            </div>
+        </section>
+
+        <!-- Danh sách giai đoạn -->
+        <section class="box">
+            <h2>Các giai đoạn</h2>
+            <div id="stagesContainer">
+                <!-- Các giai đoạn sẽ được render bằng JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <script src="assets/js/storage.js"></script>
+    <script src="assets/js/project.js"></script>
+    <script src="assets/js/export.js"></script>
+    <script src="assets/js/detail.js"></script>
+</body>
+</html>

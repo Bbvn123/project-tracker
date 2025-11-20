@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Tracker - Thống kê</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <header class="main-header">
+        <h1>Project Tracker - Thống kê</h1>
+        <nav class="main-nav">
+            <a href="index.html" class="nav-link active">📊 Thống kê</a>
+            <a href="projects.html" class="nav-link">📋 Dự án</a>
+        </nav>
+    </header>
+
+    <!-- Bộ lọc -->
+    <section class="box">
+        <div class="section-header">
+            <h2>Bộ lọc & Thống kê</h2>
+            <div class="header-actions">
+                <button onclick="showCreateProjectModal()" class="btn-primary">+ Tạo dự án</button>
+                <button onclick="exportDashboardDOC()" class="btn-export">📊 Xuất DOC</button>
+            </div>
+        </div>
+        
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all">Tất cả</button>
+            <button class="filter-btn" data-filter="active">Đang làm</button>
+            <button class="filter-btn" data-filter="completed">Đã hoàn thành</button>
+            <button class="filter-btn" data-filter="overdue">Trễ hạn</button>
+            <button class="filter-btn" data-filter="high-priority">Ưu tiên cao</button>
+        </div>
+    </section>
+
+    <!-- Thống kê tổng quan với biểu đồ -->
+    <section class="box">
+        <h2>Thống kê tổng quan</h2>
+        <div class="stats-container">
+            <!-- Biểu đồ hình tròn -->
+            <div class="chart-section">
+                <div class="chart-container">
+                    <canvas id="statsChart" width="200" height="200"></canvas>
+                    <div class="chart-center">
+                        <div class="chart-total" id="chartTotal">0</div>
+                        <div class="chart-label">Tổng dự án</div>
+                    </div>
+                </div>
+                <div class="chart-legend" id="chartLegend"></div>
+            </div>
+            
+            <!-- Thống kê chi tiết -->
+            <div class="stats-details">
+                <div class="stat-item">
+                    <div class="stat-icon active">📈</div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="statActive">0</div>
+                        <div class="stat-label">Đang thực hiện</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon completed">✅</div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="statCompleted">0</div>
+                        <div class="stat-label">Đã hoàn thành</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon overdue">⚠️</div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="statOverdue">0</div>
+                        <div class="stat-label">Trễ hạn</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon high-priority">🔥</div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="statHighPriority">0</div>
+                        <div class="stat-label">Ưu tiên cao</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dự án theo bộ lọc -->
+    <section class="box">
+        <div class="section-header">
+            <h2 id="filteredProjectsTitle">Tất cả dự án</h2>
+            <div class="filter-info" id="filterInfo"></div>
+        </div>
+        <div id="filteredProjects"></div>
+    </section>
+
+    <!-- Dự án nổi bật -->
+    <section class="box">
+        <h2>Dự án nổi bật</h2>
+        <div id="featuredProjects"></div>
+    </section>
+
+    <!-- CDN Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="assets/js/storage.js"></script>
+    <script src="assets/js/project.js"></script>
+    <script src="assets/js/export.js"></script>
+    <script src="assets/js/stats.js"></script>
+</body>
+</html>

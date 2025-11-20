@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Tracker - Dự án</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <header class="main-header">
+        <h1>Project Tracker - Dự án</h1>
+        <nav class="main-nav">
+            <a href="index.html" class="nav-link">📊 Thống kê</a>
+            <a href="projects.html" class="nav-link active">📋 Dự án</a>
+        </nav>
+    </header>
+
+    <!-- Header với nút tạo dự án -->
+    <section class="box">
+        <div class="section-header">
+            <h2>Danh sách dự án</h2>
+            <button onclick="showCreateProjectModal()" class="btn-primary">+ Tạo dự án mới</button>
+        </div>
+    </section>
+
+    <!-- Thanh tìm kiếm và sắp xếp -->
+    <section class="box">
+        <div class="search-sort-container">
+            <!-- Tìm kiếm -->
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm theo tên dự án..." class="search-input">
+                <button onclick="clearSearch()" class="btn-clear" id="clearSearchBtn" style="display: none;">✕</button>
+            </div>
+            
+            <!-- Sắp xếp -->
+            <div class="sort-options">
+                <label for="sortSelect">Sắp xếp:</label>
+                <select id="sortSelect" class="sort-select">
+                    <option value="newest">Mới nhất</option>
+                    <option value="oldest">Cũ nhất</option>
+                    <option value="priority-high">Ưu tiên cao → thấp</option>
+                    <option value="priority-low">Ưu tiên thấp → cao</option>
+                    <option value="name-asc">Tên A → Z</option>
+                    <option value="name-desc">Tên Z → A</option>
+                    <option value="progress-high">Tiến độ cao → thấp</option>
+                    <option value="progress-low">Tiến độ thấp → cao</option>
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <!-- Danh sách dự án -->
+    <section class="box">
+        <div id="projectsContainer"></div>
+        <div id="searchResultsInfo" class="search-results-info" style="display: none;"></div>
+    </section>
+
+    <script src="assets/js/storage.js"></script>
+    <script src="assets/js/project.js"></script>
+    <script src="assets/js/export.js"></script>
+    <script src="assets/js/projects.js"></script>
+</body>
+</html>
