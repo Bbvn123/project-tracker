@@ -1,5 +1,6 @@
 let data = Storage.load();
 let currentProject = null;
+let expandedStages = new Set();
 
 // Lấy referrer từ URL hoặc localStorage
 function getReferrer() {
@@ -33,9 +34,7 @@ function loadCurrentProject() {
 
     document.getElementById('projectTitle').textContent = currentProject.name;
     
-    // Thiết lập nút quay lại
     setupBackButton();
-    
     renderStages();
     updateProjectProgress();
 }
@@ -49,7 +48,6 @@ function setupBackButton() {
         window.location.href = referrer;
     });
     
-    // Cũng có thể thêm text cho rõ ràng
     if (referrer === 'projects.html') {
         backButton.textContent = '← Quay lại danh sách';
     } else {
@@ -74,17 +72,39 @@ function calculateProjectProgress() {
     return Math.round(totalProgress / stageProgresses.length);
 }
 
-// Cập nhật hiển thị tiến độ tổng thể
+// Lấy ngày hoàn thành dự án (MỚI)
+function getProjectCompletionDate() {
+    if (!currentProject.stages) return null;
+    
+    let latestCompletionDate = null;
+    
+    currentProject.stages.forEach(stage => {
+        if (stage.tasks) {
+            stage.tasks.forEach(task => {
+                if (task.completed && task.updatedAt) {
+                    const taskDate = new Date(task.updatedAt);
+                    if (!latestCompletionDate || taskDate > latestCompletionDate) {
+                        latestCompletionDate = taskDate;
+                    }
+                }
+            });
+        }
+    });
+    
+    return latestCompletionDate;
+}
+
+// Cập nhật hiển thị tiến độ tổng thể (ĐÃ THÊM NGÀY HOÀN THÀNH)
 function updateProjectProgress() {
     const progress = calculateProjectProgress();
     const isOverdue = ProjectManager.isProjectOverdue(currentProject);
     const priorityIcon = ProjectManager.getPriorityIcon(currentProject.priority);
     const priorityColor = ProjectManager.getPriorityColor(currentProject.priority);
+    const completionDate = getProjectCompletionDate(); // MỚI
     
     const progressElement = document.getElementById('projectProgress');
     
     if (!progressElement) {
-        // Tạo element nếu chưa có
         const mainElement = document.querySelector('main');
         const progressDiv = document.createElement('div');
         progressDiv.id = 'projectProgress';
@@ -117,6 +137,14 @@ function updateProjectProgress() {
                         <span>${formatDate(currentProject.createdAt)}</span>
                     </div>
                 </div>
+                ${completionDate ? `
+                    <div class="detail-row">
+                        <div class="detail-item">
+                            <strong>Ngày hoàn thành:</strong>
+                            <span class="completed">${formatDate(completionDate)}</span>
+                        </div>
+                    </div>
+                ` : ''}
                 ${currentProject.description ? `
                     <div class="detail-row">
                         <div class="detail-item full-width">
@@ -138,7 +166,6 @@ function updateProjectProgress() {
         `;
         mainElement.insertBefore(progressDiv, mainElement.firstChild);
     } else {
-        // Cập nhật element đã có
         progressElement.innerHTML = `
             <h2>Thông tin dự án</h2>
             <div class="project-details">
@@ -167,6 +194,14 @@ function updateProjectProgress() {
                         <span>${formatDate(currentProject.createdAt)}</span>
                     </div>
                 </div>
+                ${completionDate ? `
+                    <div class="detail-row">
+                        <div class="detail-item">
+                            <strong>Ngày hoàn thành:</strong>
+                            <span class="completed">${formatDate(completionDate)}</span>
+                        </div>
+                    </div>
+                ` : ''}
                 ${currentProject.description ? `
                     <div class="detail-row">
                         <div class="detail-item full-width">
@@ -189,7 +224,7 @@ function updateProjectProgress() {
     }
 }
 
-// Render danh sách giai đoạn với DROPDOWN (ĐÃ NÂNG CẤP)
+// Render danh sách giai đoạn với TIẾN ĐỘ THANH MÀU (ĐÃ SỬA)
 function renderStages() {
     const container = document.getElementById('stagesContainer');
     container.innerHTML = "";
@@ -204,22 +239,30 @@ function renderStages() {
         const completedTasks = stage.tasks ? stage.tasks.filter(task => task.completed).length : 0;
         const totalTasks = stage.tasks ? stage.tasks.length : 0;
         
+        const isExpanded = expandedStages.has(stage.id);
+        
         const stageDiv = document.createElement("div");
         stageDiv.className = "stage-item box";
         stageDiv.innerHTML = `
             <div class="stage-header">
-                <div class="stage-info">
-                    <div class="stage-title-wrapper" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                        <strong>${escapeHtml(stage.name)}</strong>
-                        <button class="btn-toggle-stage" data-stage-id="${stage.id}" style="background: none; border: none; font-size: 1.2em; cursor: pointer;">
-                            ▼
-                        </button>
-                    </div>
-                    <div class="stage-progress">
-                        <div class="progress-bar small">
-                            <div class="progress-fill" style="width: ${stageProgress}%"></div>
+                <div class="stage-info" style="width: 100%;">
+                    <div class="stage-title-wrapper clickable" data-stage-id="${stage.id}" style="display: flex; justify-content: space-between; align-items: center; width: 100%; cursor: pointer; padding: 5px; border-radius: 5px;">
+                        <div style="flex: 1;">
+                            <strong>${escapeHtml(stage.name)}</strong>
+                            <!-- TIẾN ĐỘ GIAI ĐOẠN - HIỂN THỊ BẰNG THANH MÀU -->
+                            <div class="stage-progress" style="margin-top: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <span style="font-size: 0.85em; color: #666;">Tiến độ:</span>
+                                    <span style="font-size: 0.85em; font-weight: bold; color: #495057;">${completedTasks}/${totalTasks} task (${stageProgress}%)</span>
+                                </div>
+                                <div class="progress-bar" style="height: 12px; background: #e9ecef; border-radius: 10px; overflow: hidden; position: relative;">
+                                    <div class="progress-fill" style="height: 100%; background: linear-gradient(90deg, #28a745, #20c997); border-radius: 10px; width: ${stageProgress}%; transition: width 0.5s ease;"></div>
+                                </div>
+                            </div>
                         </div>
-                        <span class="progress-text">${completedTasks}/${totalTasks} task (${stageProgress}%)</span>
+                        <button class="btn-toggle-stage" data-stage-id="${stage.id}" style="background: none; border: none; font-size: 1.2em; cursor: pointer; padding: 5px; margin-left: 10px;">
+                            ${isExpanded ? '▲' : '▼'}
+                        </button>
                     </div>
                 </div>
                 <button class="btn-delete-stage"
@@ -228,7 +271,7 @@ function renderStages() {
                     Xóa giai đoạn
                 </button>
             </div>
-            <div class="tasks-section" id="tasks-section-${stage.id}" style="display: none; margin-top: 15px;">
+            <div class="tasks-section" id="tasks-section-${stage.id}" style="${isExpanded ? 'display: block;' : 'display: none;'} margin-top: 15px;">
                 <button class="btn-add-task" data-stage-id="${stage.id}" style="margin-bottom: 15px;">
                     + Thêm task
                 </button>
@@ -239,7 +282,6 @@ function renderStages() {
         renderTasks(stage.id);
     });
 
-    // Gắn event listeners sau khi render
     setTimeout(() => {
         attachDetailEventListeners();
     }, 0);
@@ -247,7 +289,7 @@ function renderStages() {
     updateProjectProgress();
 }
 
-// Render danh sách task với UPLOAD ẢNH (ĐÃ NÂNG CẤP)
+// Render danh sách task với ẢNH và VIEW FULL
 function renderTasks(stageId) {
     const stage = currentProject.stages.find(s => s.id === stageId);
     const container = document.getElementById(`tasks-${stageId}`);
@@ -266,7 +308,6 @@ function renderTasks(stageId) {
         const priorityColor = ProjectManager.getPriorityColor(task.priority);
         const priorityIcon = ProjectManager.getPriorityIcon(task.priority);
         
-        // Format thông tin deadline
         let deadlineInfo = '';
         if (task.deadline) {
             if (!task.completed) {
@@ -292,12 +333,15 @@ function renderTasks(stageId) {
             }
         }
         
-        // Hiển thị ảnh nếu có
+        // HIỂN THỊ ẢNH VỚI CLICK TO VIEW FULL
         let imageHtml = '';
         if (task.image) {
             imageHtml = `
                 <div class="task-image" style="margin-top: 10px;">
-                    <img src="assets/img/${task.image}" alt="Task image" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 1px solid #ddd;">
+                    <img src="${task.image}" alt="Task image" 
+                         class="task-image-thumbnail"
+                         data-image-src="${task.image}"
+                         style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 1px solid #ddd; cursor: zoom-in;">
                     <button class="btn-remove-image" data-task-id="${task.id}" data-stage-id="${stageId}" style="background: #dc3545; color: white; border: none; padding: 2px 8px; border-radius: 4px; margin-left: 5px; font-size: 0.8em;">
                         Xóa ảnh
                     </button>
@@ -396,7 +440,7 @@ function showEditProjectModal() {
     });
 }
 
-// Hiển thị modal thêm task với UPLOAD ẢNH (ĐÃ NÂNG CẤP)
+// Hiển thị modal thêm task với UPLOAD ẢNH
 function showAddTaskModal(stageId) {
     const modal = document.createElement('div');
     modal.className = 'modal';
@@ -434,7 +478,7 @@ function showAddTaskModal(stageId) {
                 <div class="form-group">
                     <label>Ảnh đính kèm:</label>
                     <input type="file" id="taskImage" accept="image/*" style="padding: 5px;">
-                    <small style="color: #666;">Chỉ chấp nhận ảnh (tối đa 1 ảnh)</small>
+                    <small style="color: #666;">Chỉ chấp nhận ảnh (tối đa 2MB)</small>
                 </div>
                 <div class="form-actions">
                     <button type="button" onclick="closeModal()">Hủy</button>
@@ -452,7 +496,7 @@ function showAddTaskModal(stageId) {
     });
 }
 
-// Hiển thị modal upload ảnh cho task (MỚI)
+// Hiển thị modal upload ảnh cho task
 function showUploadImageModal(stageId, taskId) {
     const modal = document.createElement('div');
     modal.className = 'modal';
@@ -463,7 +507,7 @@ function showUploadImageModal(stageId, taskId) {
                 <div class="form-group">
                     <label>Chọn ảnh:</label>
                     <input type="file" id="taskImageUpload" accept="image/*" required style="padding: 5px;">
-                    <small style="color: #666;">Chỉ chấp nhận ảnh (tối đa 1 ảnh)</small>
+                    <small style="color: #666;">Chỉ chấp nhận ảnh (tối đa 2MB)</small>
                 </div>
                 <div class="form-actions">
                     <button type="button" onclick="closeModal()">Hủy</button>
@@ -481,7 +525,17 @@ function showUploadImageModal(stageId, taskId) {
     });
 }
 
-// Upload ảnh cho task (MỚI)
+// Hàm chuyển file thành Base64
+function convertToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+// Upload ảnh cho task
 async function uploadTaskImage(stageId, taskId) {
     const fileInput = document.getElementById('taskImageUpload');
     const file = fileInput.files[0];
@@ -491,27 +545,30 @@ async function uploadTaskImage(stageId, taskId) {
         return;
     }
     
+    if (file.size > 2 * 1024 * 1024) {
+        alert('Ảnh quá lớn! Vui lòng chọn ảnh nhỏ hơn 2MB.');
+        return;
+    }
+    
     if (!file.type.startsWith('image/')) {
         alert('Vui lòng chọn file ảnh!');
         return;
     }
     
     try {
-        // Tạo tên file unique
-        const fileExtension = file.name.split('.').pop();
-        const fileName = `task_${taskId}_${Date.now()}.${fileExtension}`;
+        showNotification('Đang xử lý ảnh...', 'info');
         
-        // Trong thực tế, bạn sẽ upload file lên server
-        // Ở đây ta giả lập bằng cách lưu thông tin file
+        const base64Image = await convertToBase64(file);
+        
         const stage = currentProject.stages.find(s => s.id === stageId);
         const task = stage.tasks.find(t => t.id === taskId);
         
         if (task) {
-            task.image = fileName;
+            task.image = base64Image;
             Storage.save(data);
             
             closeModal();
-            renderStages(); // Render lại để hiển thị ảnh
+            renderStages();
             showNotification('Đã upload ảnh thành công!', 'success');
         }
     } catch (error) {
@@ -520,7 +577,7 @@ async function uploadTaskImage(stageId, taskId) {
     }
 }
 
-// Xóa ảnh của task (MỚI)
+// Xóa ảnh của task
 function removeTaskImage(stageId, taskId) {
     if (confirm('Bạn có chắc muốn xóa ảnh này?')) {
         const stage = currentProject.stages.find(s => s.id === stageId);
@@ -529,10 +586,55 @@ function removeTaskImage(stageId, taskId) {
         if (task && task.image) {
             task.image = null;
             Storage.save(data);
-            renderStages(); // Render lại
+            renderStages();
             showNotification('Đã xóa ảnh thành công!', 'success');
         }
     }
+}
+
+// Hiển thị ảnh full size
+function showFullImage(imageSrc) {
+    const overlay = document.createElement('div');
+    overlay.className = 'image-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+        cursor: zoom-out;
+    `;
+    
+    overlay.innerHTML = `
+        <div style="position: relative; max-width: 90%; max-height: 90%;">
+            <img src="${imageSrc}" alt="Full size" style="max-width: 100%; max-height: 90vh; border-radius: 8px;">
+            <button class="btn-close-image" style="position: absolute; top: -40px; right: 0; background: #dc3545; color: white; border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 1.2em; cursor: pointer;">
+                ×
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Đóng khi click overlay hoặc nút close
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.classList.contains('btn-close-image')) {
+            document.body.removeChild(overlay);
+        }
+    });
+    
+    // Đóng khi nhấn ESC
+    document.addEventListener('keydown', function closeOnEscape(e) {
+        if (e.key === 'Escape') {
+            document.body.removeChild(overlay);
+            document.removeEventListener('keydown', closeOnEscape);
+        }
+    });
 }
 
 // Đóng modal
@@ -558,7 +660,6 @@ function updateProject() {
         return;
     }
     
-    // Cập nhật thông tin
     currentProject.name = updatedData.name;
     currentProject.mainAssignee = updatedData.mainAssignee;
     currentProject.deadline = updatedData.deadline;
@@ -571,8 +672,8 @@ function updateProject() {
     showNotification('Đã cập nhật thông tin dự án thành công!', 'success');
 }
 
-// Thêm task mới với ẢNH (ĐÃ NÂNG CẤP)
-function addTask(stageId) {
+// Thêm task mới với ẢNH Base64
+async function addTask(stageId) {
     const taskData = {
         name: document.getElementById('taskName').value.trim(),
         assignee: document.getElementById('taskAssignee').value.trim(),
@@ -589,13 +690,27 @@ function addTask(stageId) {
     const newTask = ProjectManager.addTask(currentProject.id, stageId, taskData);
     const stage = currentProject.stages.find(s => s.id === stageId);
     
-    // Xử lý ảnh nếu có
     const fileInput = document.getElementById('taskImage');
     const file = fileInput.files[0];
     
-    if (file && file.type.startsWith('image/')) {
-        const fileExtension = file.name.split('.').pop();
-        newTask.image = `task_${newTask.id}_${Date.now()}.${fileExtension}`;
+    if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+            alert('Ảnh quá lớn! Vui lòng chọn ảnh nhỏ hơn 2MB.');
+            return;
+        }
+        
+        if (!file.type.startsWith('image/')) {
+            alert('Vui lòng chọn file ảnh!');
+            return;
+        }
+        
+        try {
+            const base64Image = await convertToBase64(file);
+            newTask.image = base64Image;
+        } catch (error) {
+            console.error('Image conversion error:', error);
+            showNotification('Lỗi xử lý ảnh!', 'error');
+        }
     }
     
     if (!stage.tasks) {
@@ -606,7 +721,7 @@ function addTask(stageId) {
     Storage.save(data);
     
     closeModal();
-    renderStages(); // Render lại toàn bộ stages
+    renderStages();
     showNotification(`Đã thêm task "${taskData.name}"`, 'success');
 }
 
@@ -617,7 +732,7 @@ function deleteTask(stageId, taskId, taskName) {
         if (stage && stage.tasks) {
             stage.tasks = stage.tasks.filter(t => t.id !== taskId);
             Storage.save(data);
-            renderStages(); // Render lại toàn bộ
+            renderStages();
             showNotification(`Đã xóa task "${taskName}"`, 'success');
         }
     }
@@ -633,7 +748,7 @@ function toggleTask(stageId, taskId) {
             task.status = task.completed ? 'completed' : 'active';
             task.updatedAt = new Date().toISOString();
             Storage.save(data);
-            renderStages(); // Render lại để cập nhật UI
+            renderStages();
         }
     }
 }
@@ -642,13 +757,14 @@ function toggleTask(stageId, taskId) {
 function deleteStage(stageId, stageName) {
     if (confirm(`Bạn có chắc muốn xóa giai đoạn "${stageName}"?`)) {
         currentProject.stages = currentProject.stages.filter(s => s.id !== stageId);
+        expandedStages.delete(stageId);
         Storage.save(data);
-        renderStages(); // Render lại
+        renderStages();
         showNotification(`Đã xóa giai đoạn "${stageName}"`, 'success');
     }
 }
 
-// Toggle hiển thị tasks trong giai đoạn (MỚI)
+// Toggle hiển thị tasks trong giai đoạn
 function toggleStageTasks(stageId) {
     const tasksSection = document.getElementById(`tasks-section-${stageId}`);
     const toggleBtn = document.querySelector(`.btn-toggle-stage[data-stage-id="${stageId}"]`);
@@ -656,17 +772,30 @@ function toggleStageTasks(stageId) {
     if (tasksSection.style.display === 'none') {
         tasksSection.style.display = 'block';
         toggleBtn.textContent = '▲';
+        expandedStages.add(stageId);
     } else {
         tasksSection.style.display = 'none';
         toggleBtn.textContent = '▼';
+        expandedStages.delete(stageId);
     }
 }
 
-// Event listeners cho trang chi tiết (ĐÃ NÂNG CẤP)
+// Event listeners cho trang chi tiết
 function attachDetailEventListeners() {
-    // Toggle stage dropdown
+    // Toggle stage dropdown khi click vào toàn bộ title wrapper
+    document.querySelectorAll('.stage-title-wrapper.clickable').forEach(wrapper => {
+        wrapper.addEventListener('click', (e) => {
+            if (!e.target.closest('.btn-delete-stage')) {
+                const stageId = e.currentTarget.dataset.stageId;
+                toggleStageTasks(stageId);
+            }
+        });
+    });
+
+    // Toggle stage dropdown khi click vào nút icon
     document.querySelectorAll('.btn-toggle-stage').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            e.stopPropagation();
             const stageId = e.target.dataset.stageId;
             toggleStageTasks(stageId);
         });
@@ -698,6 +827,14 @@ function attachDetailEventListeners() {
         });
     });
 
+    // Xem ảnh full size
+    document.querySelectorAll('.task-image-thumbnail').forEach(img => {
+        img.addEventListener('click', (e) => {
+            const imageSrc = e.target.dataset.imageSrc;
+            showFullImage(imageSrc);
+        });
+    });
+
     // Xóa task
     document.querySelectorAll('.btn-delete-task').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -720,6 +857,7 @@ function attachDetailEventListeners() {
     // Xóa giai đoạn
     document.querySelectorAll('.btn-delete-stage').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            e.stopPropagation();
             const stageId = e.target.dataset.stageId;
             const stageName = e.target.dataset.stageName;
             deleteStage(stageId, stageName);
@@ -772,13 +910,12 @@ document.getElementById('btnAddStage').addEventListener('click', () => {
     Storage.save(data);
     
     document.getElementById('stageName').value = "";
-    renderStages(); // Render lại toàn bộ
+    renderStages();
     showNotification(`Đã thêm giai đoạn "${stageName}"`, 'success');
 });
 
 // Khởi chạy khi trang load
 document.addEventListener('DOMContentLoaded', () => {
-    // Lưu trang hiện tại khi vào trang chi tiết
     saveCurrentPage();
     loadCurrentProject();
 });
